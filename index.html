@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fermionic Plants Security Auditor</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0b0e11; color: #e1e1e1; padding: 20px; line-height: 1.6; }
+        .wrapper { max-width: 900px; margin: auto; }
+        .card { background: #1c2128; border: 1px solid #444c56; border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        h1 { color: #e20074; margin-top: 0; border-bottom: 2px solid #e20074; padding-bottom: 10px; font-size: 1.8rem; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #8b949e; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 12px; background: #2d333b; border: 1px solid #444c56; color: white; border-radius: 5px; box-sizing: border-box; font-family: 'Consolas', monospace; }
+        
+        .btn-container { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-fire { background: #e20074; color: white; border: none; padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; flex: 2; font-size: 16px; text-transform: uppercase; transition: background 0.2s; }
+        .btn-fire:hover { background: #ff0084; }
+        .btn-clear { background: #30363d; color: #8b949e; border: 1px solid #444c56; padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; flex: 1; font-size: 14px; transition: color 0.2s; }
+        .btn-clear:hover { color: white; border-color: #8b949e; }
+
+        #auditLog { background: #0d1117; border-radius: 5px; padding: 15px; height: 450px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 13px; border: 1px solid #30363d; margin-top: 10px; }
+        .log-entry { padding: 10px; border-bottom: 1px solid #30363d; margin-bottom: 5px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px; text-transform: uppercase; }
+        .tag-fail { background: #da3633; color: white; }
+        .tag-success { background: #238636; color: white; }
+        .tag-info { background: #1f6feb; color: white; }
+        
+        .vuln-alert { color: #f85149; font-weight: bold; background: rgba(248, 81, 73, 0.1); padding: 10px; border: 1px dashed #f85149; margin-top: 10px; display: block; }
+        .data-preview { color: #8b949e; background: #161b22; padding: 8px; border-radius: 3px; display: block; margin-top: 8px; word-break: break-all; border: 1px solid #30363d; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="card">
+        <h1>Fermionic Plants Security Auditor</h1>
+        <p style="font-size: 0.85rem; color: #8b949e;">Testing Origin: <code style="color:#58a6ff"><script>document.write(window.location.origin)</script></code></p>
+        
+        <div class="form-group">
+            <label>Target URL (from Burp Site Map):</label>
+            <input type="text" id="targetUrl" placeholder="https://api.t-mobile.com/..." value="">
+        </div>
+
+        <div style="display: flex; gap: 10px;" class="form-group">
+            <div style="flex: 1;">
+                <label>HTTP Method:</label>
+                <select id="method">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="OPTIONS">OPTIONS</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>Credentials (Cookies):</label>
+                <select id="creds">
+                    <option value="include">Include</option>
+                    <option value="omit">Omit</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button class="btn-fire" onclick="fireAudit()">Execute Audit</button>
+            <button class="btn-clear" onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 10px;">
+        <h3 style="margin-left: 15px; font-size: 1.1rem; color: #e20074;">Live Audit Log</h3>
+        <div id="auditLog">--- System Online. Awaiting target... ---</div>
+    </div>
+</div>
+
+<script>
+    const logBox = document.getElementById('auditLog');
+
+    function clearLog() {
+        logBox.innerHTML = "--- Log Cleared ---";
+    }
+
+    function addLog(type, message, status = null) {
+        if(logBox.innerText.includes("System Online") || logBox.innerText.includes("Log Cleared")) logBox.innerHTML = "";
+        
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        const tagClass = type === 'success' ? 'tag-success' : (type === 'fail' ? 'tag-fail' : 'tag-info');
+        
+        div.innerHTML = `
+            <div>
+                <span class="tag ${tagClass}">${type}</span> 
+                <span style="color:#8b949e; font-size: 11px;">[${new Date().toLocaleTimeString()}]</span>
+                ${status ? '<span style="margin-left:10px; color:#58a6ff;">Status: ' + status + '</span>' : ''}
+            </div>
+            <div style="margin-top:5px;">${message}</div>
+        `;
+        logBox.prepend(div);
+    }
+
+    async function fireAudit() {
+        const url = document.getElementById('targetUrl').value;
+        const method = document.getElementById('method').value;
+        const credentials = document.getElementById('creds').value;
+
+        if (!url) {
+            addLog('fail', 'Error: Please enter a Target URL.');
+            return;
+        }
+
+        addLog('info', `Testing <b>${method}</b> on <code>${url}</code>`);
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                mode: 'cors',
+                credentials: credentials,
+                headers: { 'Content-Type': 'application/json' },
+                body: (method === 'POST') ? JSON.stringify({}) : null
+            });
+
+            const acao = response.headers.get('Access-Control-Allow-Origin');
+            const acac = response.headers.get('Access-Control-Allow-Credentials');
+            const body = await response.text();
+
+            let message = `<b>ACAO:</b> ${acao || '<i style="color:#da3633;">Missing</i>'}<br><b>ACAC:</b> ${acac || 'None'}<br>
+                           <b>Preview:</b> <span class="data-preview">${body.substring(0, 150) || '<i>Empty Response</i>'}</span>`;
+            
+            // Critical vulnerability check
+            const originMatches = (acao === '*' || acao === window.location.origin);
+            if (acao && originMatches && acac === 'true') {
+                message += `<span class="vuln-alert">JACKPOT: This endpoint leaks credentialed data to this domain!</span>`;
+                addLog('success', message, response.status);
+            } else if (acao) {
+                message += `<br><span style="color:#d29922;">Partial Match: Server returned ACAO header, but check if it matches your specific domain.</span>`;
+                addLog('info', message, response.status);
+            } else {
+                addLog('info', message, response.status);
+            }
+
+        } catch (err) {
+            addLog('fail', `<b>CORS Blocked:</b> Request failed or browser blocked the response.<br><small>${err.message}</small>`);
+        }
+    }
+</script>
+
+</body>
+</html>
