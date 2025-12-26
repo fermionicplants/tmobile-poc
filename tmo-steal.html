@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Exploit: Token Exfiltration</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0b0e11; color: #e1e1e1; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .exploit-card { background: #1c2128; border: 1px solid #444c56; padding: 40px; border-radius: 12px; text-align: center; box-shadow: 0 0 50px rgba(226, 0, 116, 0.2); max-width: 600px; width: 90%; }
+        h1 { color: #e20074; margin-bottom: 10px; font-size: 22px; }
+        p { color: #8b949e; margin-bottom: 30px; font-size: 14px; }
+        
+        /* THE STEAL BUTTON */
+        .btn-steal { 
+            background: #e20074; color: white; border: none; padding: 20px 40px; 
+            border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; 
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(226, 0, 116, 0.4);
+        }
+        .btn-steal:hover { background: #ff0084; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(226, 0, 116, 0.6); }
+        .btn-steal:active { transform: translateY(0); }
+
+        #output { margin-top: 30px; background: #0d1117; border: 1px solid #30363d; padding: 15px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 12px; text-align: left; min-height: 100px; overflow-x: auto; display: none; }
+        .success { color: #39d353; font-weight: bold; }
+        .error { color: #f85149; }
+    </style>
+</head>
+<body>
+
+<div class="exploit-card">
+    <h1>Fermionic Plants Security PoC</h1>
+    <p>Targeting: <code>adn.t-mobile.com/.../tokens</code></p>
+    
+    <button class="
