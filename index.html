@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>T-Mobile Internal Auditor PoC</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0b0e11; color: #e1e1e1; padding: 20px; line-height: 1.6; }
+        .wrapper { max-width: 900px; margin: auto; }
+        .card { background: #1c2128; border: 1px solid #444c56; border-radius: 8px; padding: 25px; margin-bottom: 20px; }
+        h1 { color: #e20074; margin-top: 0; border-bottom: 2px solid #e20074; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 15px; }
+        input, select { width: 100%; padding: 12px; background: #2d333b; border: 1px solid #444c56; color: white; border-radius: 5px; box-sizing: border-box; }
+        
+        button { background: #e20074; color: white; border: none; padding: 12px 25px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background: #ff0084; }
+
+        #auditLog { background: #0d1117; border-radius: 5px; padding: 15px; height: 400px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 13px; border: 1px solid #30363d; }
+        .log-entry { padding: 10px; border-bottom: 1px solid #30363d; margin-bottom: 5px; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px; text-transform: uppercase; }
+        .tag-fail { background: #da3633; color: white; }
+        .tag-success { background: #238636; color: white; }
+        .tag-info { background: #1f6feb; color: white; }
+        .vuln-alert { color: #f85149; font-weight: bold; background: rgba(248, 81, 73, 0.1); padding: 10px; border: 1px dashed #f85149; margin-top: 10px; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="card">
+        <h1>T-Mobile Security Auditor</h1>
+        <p>Testing from: <strong><script>document.write(window.location.origin)</script></strong></p>
+        
+        <div class="form-group">
+            <label>Endpoint URL:</label>
+            <input type="text" id="targetUrl" placeholder="https://api.t-mobile.com/..." value="https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens">
+        </div>
+
+        <div style="display: flex; gap: 10px;" class="form-group">
+            <select id="method" style="flex: 1;">
+                <option value="GET">GET</option>
