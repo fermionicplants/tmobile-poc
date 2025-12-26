@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fermionic Plants - Advanced Auditor</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0b0e11; color: #e1e1e1; padding: 20px; }
+        .wrapper { max-width: 850px; margin: auto; }
+        .card { background: #1c2128; border: 1px solid #444c56; border-radius: 8px; padding: 25px; margin-bottom: 20px; border-top: 5px solid #e20074; }
+        h1 { color: #e20074; margin: 0 0 10px 0; font-size: 1.5rem; }
+        label { display: block; margin: 10px 0 5px 0; font-size: 0.85rem; color: #8b949e; }
+        input, select { width: 100%; padding: 12px; background: #2d333b; border: 1px solid #444c56; color: white; border-radius: 5px; box-sizing: border-box; font-family: monospace; }
+        .btn-fire { background: #e20074; color: white; border: none; padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; margin-top: 10px; }
+        #log { background: #0d1117; border: 1px solid #30363d; padding: 15px; height: 350px; overflow-y: auto; font-family: monospace; font-size: 13px; margin-top: 15px; border-radius: 5px; }
+        .success { color: #39d353; font-weight: bold; }
+        .error { color: #f85149; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="card">
+        <h1>Advanced TMO Auditor</h1>
+        
+        <label>Target URL:</label>
+        <input type="text" id="url" value="https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens">
+
+        <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+                <label>Method:</label>
+                <select id="method">
+                    <option value="POST">POST</option>
+                    <option value="GET">GET</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>Credentials:</label>
+                <select id="creds">
+                    <option value="include">Include (Cookies)</option>
+                    <option value="omit">Omit</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn-fire" onclick="runTest()">Run Audit</button>
+    </div>
+
+    <div class="card" style="padding: 10px;">
+        <div id="log">Awaiting input...</div>
+    </div>
+</div>
+
+<script>
+    async function runTest() {
+        const url = document.getElementById('url').value;
+        const method = document.getElementById('method').value;
+        const creds = document.getElementById('creds').value;
+        const log = document.getElementById('log');
+
+        log.innerHTML = `[*] Testing: ${url}\n[*] Origin: ${window.location.origin}\n\n`;
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                mode: 'cors',
+                credentials: creds,
+                headers: { 'Content-Type': 'application/json' },
+                body: method === 'POST' ? JSON.stringify({}) : null
+            });
+
+            const acao = response.headers.get('Access-Control-Allow-Origin');
+            const acac = response.headers.get('Access-Control-Allow-Credentials');
+            const data = await response.text();
+
+            log.innerHTML += `[+] Status: ${response.status}\n`;
+            log.innerHTML += `[+] ACAO: <span class="success">${acao}</span>\n`;
+            log.innerHTML += `[+] ACAC: <span class="success">${acac}</span>\n\n`;
+            log.innerHTML += `<b>RESPONSE BODY:</b>\n${data.substring(0, 1000)}`;
+
+        } catch (err) {
+            log.innerHTML += `<span class="error">[!] Error: ${err.message}</span>\n`;
+            log.innerHTML += `Browser blocked the request. The server's CORS policy does not trust this Origin.`;
+        }
+    }
+</script>
+</body>
+</html>
