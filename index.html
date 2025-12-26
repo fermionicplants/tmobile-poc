@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>T-Mobile Recon Tester</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #fafafa; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        h2 { color: #e20074; border-bottom: 2px solid #e20074; padding-bottom: 10px; }
+        input { width: 80%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; background: #e20074; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        #log { margin-top: 20px; border-top: 2px solid #eee; padding-top: 20px; }
+        .log-entry { background: #222; color: #0f0; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; overflow-x: auto; }
+        .status-tag { font-weight: bold; padding: 2px 5px; border-radius: 3px; margin-right: 10px; }
+        .status-200 { background: #28a745; color: white; }
+        .status-error { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>CORS Recon Tool</h2>
+    <p>Enter a URL discovered during your crawl:</p>
+    <input type="text" id="target" placeholder="https://api.t-mobile.com/...">
+    <button onclick="fireTest()">TEST ENDPOINT</button>
+
+    <div id="log">
+        <strong>Test History:</strong>
+        <div id="entries"></div>
+    </div>
+</div>
+
+<script>
+    function fireTest() {
+        const url = document.getElementById('target').value;
+        const entries = document.getElementById('entries');
+        
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerText = "Testing: " + url + " ...";
+        entries.prepend(entry);
+
+        fetch(url, {
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        })
+        .then(res => {
+            const acao = res.headers.get('Access-Control-Allow-Origin');
+            const acac = res.headers.get('Access-Control-Allow-Credentials');
+            
+            entry.innerHTML = `<span class="status-tag status-200">${res.status}</span> ` +
+                              `URL: ${url}<br>` +
+                              `ACAO: <b>${acao || 'None'}</b><br>` +
+                              `ACAC: <b>${acac || 'None'}</b><br>` +
+                              `Result: ${acao ? 'POTENTIAL VULNERABILITY FOUND' : 'Secure'}`;
+        })
+        .catch(err => {
+            entry.innerHTML = `<span class="status-tag status-error">BLOCKED</span> ` +
+                              `URL: ${url}<br>Error: ${err.message}`;
+        });
+    }
+</script>
+
+</body>
+</html>
