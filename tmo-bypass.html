@@ -64,4 +64,21 @@
 
             consoleBox.innerHTML += `[+] Response Status: ${response.status}<br>`;
             consoleBox.innerHTML += `[+] ACAO: ${acao || 'None'}<br>`;
-            consoleBox.innerHTML += `[+] ACAC: ${acac || 'None'}<br><br
+            consoleBox.innerHTML += `[+] ACAC: ${acac || 'None'}<br><br>`;
+
+            if (acao && acac === 'true') {
+                consoleBox.innerHTML += `<span class="success-text">[!!!] VULNERABILITY CONFIRMED: DATA LEAKED [!!!]</span>`;
+                consoleBox.innerHTML += `<div class="raw-data">${responseData || 'Response body was empty, but headers allow theft.'}</div>`;
+            } else {
+                consoleBox.innerHTML += `<span class="fail-text">[-] CORS Blocked or Misconfigured. The server did not reflect this specific origin with credentials.</span>`;
+            }
+
+        } catch (e) {
+            consoleBox.innerHTML += `<span class="fail-text">[!] Browser Security Error: ${e.message}</span><br>`;
+            consoleBox.innerHTML += `<small style="color:#8b949e">This usually happens if the server rejected the preflight OPTIONS request for this specific Origin.</small>`;
+        }
+    }
+</script>
+
+</body>
+</html>
